@@ -1,60 +1,37 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FaSearch } from "react-icons/fa";
 import { FiSun, FiMoon } from "react-icons/fi";
 import Photo from "./Photo";
+import useDarkMode from "./hooks/useDarkMode";
+import useFetchImages from "./hooks/useFetchImages";
+import useDebounce from "./hooks/useDebounce";
 
 const clientID = `?client_id=${process.env.REACT_APP_ACCESS_KEY}`;
 const mainUrl = `https://api.unsplash.com/photos/`;
 const searchUrl = `https://api.unsplash.com/search/photos/`;
 
 function App() {
-  const [loading, setLoading] = useState(false);
-  const [photos, setPhotos] = useState([]);
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
   const mounted = useRef(false);
-  const [newImages, setNewImages] = useState(false);
-  const [error, setError] = useState(null);
-  const [darkMode, setDarkMode] = useState(false);
-
-  const fetchImages = useCallback(async () => {
-    setLoading(true);
-    let url;
-    const urlPage = `&page=${page}`;
-    const urlQuery = `&query=${query}`;
-    url = query
-      ? `${searchUrl}${clientID}${urlPage}${urlQuery}`
-      : `${mainUrl}${clientID}${urlPage}`;
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Failed to fetch images");
-      }
-      const data = await response.json();
-
-      setPhotos((oldPhotos) => {
-        if (query && page === 1) {
-          return data.results;
-        } else if (query) {
-          return [...oldPhotos, ...data.results];
-        } else {
-          return [...oldPhotos, ...data];
-        }
-      });
-      setNewImages(false);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching images:", error);
-      setError(error.message);
-      setNewImages(false);
-      setLoading(false);
+  const [darkMode, toggleDarkMode] = useDarkMode();
+  const { photos, loading, newImages, error, setNewImages } = useFetchImages(
+    page,
+    query,
+    clientID,
+    mainUrl,
+    searchUrl
+  );
+  const debouncedEvent = useDebounce(() => {
+    if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 2) {
+      setNewImages(true);
     }
-  }, [page, query]);
+  }, 100);
 
   useEffect(() => {
-    fetchImages();
-  }, [page, fetchImages]);
+    window.addEventListener("scroll", debouncedEvent);
+    return () => window.removeEventListener("scroll", debouncedEvent);
+  }, [debouncedEvent]);
 
   useEffect(() => {
     if (!mounted.current) {
@@ -65,29 +42,10 @@ function App() {
     setPage((oldPage) => oldPage + 1);
   }, [newImages, loading]);
 
-  const event = () => {
-    if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 2) {
-      setNewImages(true);
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener("scroll", event);
-    return () => window.removeEventListener("scroll", event);
-  }, []);
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!query) return;
-    if (page === 1) {
-      fetchImages();
-    }
     setPage(1);
-  };
-
-  const toggleDarkMode = () => {
-    setDarkMode((prevMode) => !prevMode);
-    document.body.classList.toggle("dark-mode");
   };
 
   return (
