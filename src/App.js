@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaSearch } from "react-icons/fa";
 import { FiSun, FiMoon } from "react-icons/fi";
-import Photo from "./Photo";
+import Photo from "./components/Photo";
 import useDarkMode from "./hooks/useDarkMode";
 import useFetchImages from "./hooks/useFetchImages";
 import useDebounce from "./hooks/useDebounce";
